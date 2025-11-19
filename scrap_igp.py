@@ -1,0 +1,39 @@
+org: matiaswalde
+service: api-sismos-igp
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::624686339956:role/LabRole
+  environment:
+    TABLE_NAME: SismosIGP
+
+functions:
+  scrape_igp:
+    handler: scrap_igp.lambda_handler
+    package:
+      include:
+        - ./**  
+    events:
+      - http:
+          path: /scrape/igp
+          method: get
+          cors: true
+          integration: lambda
+
+resources:
+  Resources:
+    SismosIGP:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: SismosIGP
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
