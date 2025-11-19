@@ -1,39 +1,22 @@
-org: matiaswalde
-service: api-sismos-igp
+import requests
+import boto3
+import uuid
+import os
 
-provider:
-  name: aws
-  runtime: python3.12
-  memorySize: 1024
-  timeout: 30
-  iam:
-    role: arn:aws:iam::624686339956:role/LabRole
-  environment:
-    TABLE_NAME: SismosIGP
-
-functions:
-  scrape_igp:
-    handler: scrap_igp.lambda_handler
-    package:
-      include:
-        - ./**  
-    events:
-      - http:
-          path: /scrape/igp
-          method: get
-          cors: true
-          integration: lambda
-
-resources:
-  Resources:
-    SismosIGP:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: SismosIGP
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
+def lambda_handler(event, context):
+    url = "https://ultimosismo.igp.gob.pe/api/ultimo-sismo/ajaxb/2025"
+    response = requests.get(url)
+    if response.status_code != 200:
+        return { "statusCode": response.status_code, "body": "Error al acceder al IGP" }
+    data = response.json()
+    dynamo = boto3.resource("dynamodb")
+    table_name = os.environ["TABLE_NAME"]
+    table = dynamo.Table(table_name)
+    for sismo in data:
+        item = sismo.copy()
+        item["id"] = str(uuid.uuid4())
+        table.put_item(Item=item)
+    return {
+        "statusCode": 200,
+        "body": f"Se almacenaron {len(data)} sismos del IGP exitosamente."
+    }
