@@ -4,19 +4,22 @@ service: api-sismos-igp
 provider:
   name: aws
   runtime: python3.12
-  memorySize: 1024
-  timeout: 30
+  memorySize: 2048
+  timeout: 60
   iam:
     role: arn:aws:iam::624686339956:role/LabRole
   environment:
     TABLE_NAME: SismosIGP
+    PLAYWRIGHT_BROWSERS_PATH: /opt # NECESARIO
 
 functions:
   scrape_igp:
     handler: scrap_igp.lambda_handler
+    layers:
+      - arn:aws:lambda:us-east-1:823318193644:layer:playwright-browser-chromium:6
     package:
       include:
-        - ./**  
+        - ./**
     events:
       - http:
           path: /scrape/igp
